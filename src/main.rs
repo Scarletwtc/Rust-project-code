@@ -91,7 +91,6 @@ async fn door1_task(mut ir_sensor_door1: Input<'static, PIN_10>, mut servo1: Out
         //ibla3333333333333i
         //abd is always right
         info!("Infrared sensor is high");
-        info!("Infrared sensor is high");
         servo1.set_high();
         Timer::after(Duration::from_millis(1)).await;
         servo1.set_low();
@@ -122,6 +121,42 @@ async fn door1_task(mut ir_sensor_door1: Input<'static, PIN_10>, mut servo1: Out
         Timer::after(Duration::from_secs(1 as u64)).await;
 
     }
+}
+#[embassy_executor::task]
+async fn door2_task(mut ir_sensor_door2: Input<'static, PIN_9>, mut servo2: Output<'static, PIN_19>) {
+    loop {
+            ir_sensor_door2.wait_for_rising_edge().await;
+            servo2.set_high();
+            Timer::after(Duration::from_millis(1)).await;
+            servo2.set_low();
+            Timer::after(Duration::from_secs(1 as u64)).await;
+            servo2.set_high();
+            Timer::after(Duration::from_millis(1)).await;
+            servo2.set_low();
+            Timer::after(Duration::from_secs(1 as u64)).await;
+            servo2.set_high();
+            Timer::after(Duration::from_millis(1)).await;
+            servo2.set_low();
+            Timer::after(Duration::from_secs(1 as u64)).await;
+
+            Timer::after_secs(5).await;
+            // Set PWM signal for 180 degrees (assume 2 ms pulse width)
+            servo2.set_high();
+            Timer::after(Duration::from_millis(2)).await;
+            servo2.set_low();
+            Timer::after(Duration::from_secs(1 as u64)).await;
+
+            servo2.set_high();
+            Timer::after(Duration::from_millis(2)).await;
+            servo2.set_low();
+            Timer::after(Duration::from_secs(1 as u64)).await;
+            servo2.set_high();
+            Timer::after(Duration::from_millis(2)).await;
+            servo2.set_low();
+            Timer::after(Duration::from_secs(1 as u64)).await;
+
+    }
+
 }
 
 #[embassy_executor::main]
@@ -199,7 +234,7 @@ async fn main(spawner: Spawner) {
     spawner.spawn(park2_task(ir_sensor2, led_red2, led_green2)).unwrap();
     spawner.spawn(park3_task(ir_sensor3, led_red3, led_green3)).unwrap();
     let _= spawner.spawn(door1_task(ir_sensor_door1, servo1));
-    //let _= spawner.spawn(door2_task(ir_sensor_door2, servo2));
+    let _= spawner.spawn(door2_task(ir_sensor_door2, servo2));
 
 
     loop {
@@ -229,6 +264,7 @@ async fn main(spawner: Spawner) {
         Timer::after(Duration::from_millis(200)).await;
         config_pwm2.compare_a = config_pwm2.top; 
         buzzer2.set_config(&config_pwm2);
+        led_rfid.set_low(); 
     }
 }
 
