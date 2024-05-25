@@ -14,7 +14,8 @@ use mfrc522::{Mfrc522};
 use core::time;
 use embassy_rp::gpio::{Level, Output, Pull, Input};
 use embassy_rp::pwm::{Config as PwmConfig, Pwm};
-
+use fixed::traits::ToFixed;
+use fixed::FixedU16;
 
 // use cortex_m::prelude::{
 //     _embedded_hal_blocking_delay_DelayMs, _embedded_hal_blocking_delay_DelayUs,
@@ -85,75 +86,47 @@ async fn park3_task(mut ir_sensor3: Input<'static, PIN_7>, mut led_red3: Output<
 }
 
 #[embassy_executor::task]
-async fn door1_task(mut ir_sensor_door1: Input<'static, PIN_10>, mut servo1: Output<'static, PIN_20>) {
+async fn door1_task(mut ir_sensor_door1: Input<'static, PIN_10>, mut servo1: Pwm<'static, embassy_rp::peripherals::PWM_CH2>) {
+    let mut config: PwmConfig = Default::default();
+        let min = 0x07AE;
+        let mid =min+min/2;
+        let max = min*2;
+        config.top = 0x9999;
+        config.compare_a = min;
+        config.divider = 64_i32.to_fixed();
+        info!("{}\n", config.divider);
     loop {
         ir_sensor_door1.wait_for_rising_edge().await;
-        //ibla3333333333333i
-        //abd is always right
-        info!("Infrared sensor is high");
-        servo1.set_high();
-        Timer::after(Duration::from_millis(1)).await;
-        servo1.set_low();
-        Timer::after(Duration::from_secs(1 as u64)).await;
-        servo1.set_high();
-        Timer::after(Duration::from_millis(1)).await;
-        servo1.set_low();
-        Timer::after(Duration::from_secs(1 as u64)).await;
-        servo1.set_high();
-        Timer::after(Duration::from_millis(1)).await;
-        servo1.set_low();
-        Timer::after(Duration::from_secs(1 as u64)).await;
-
-        Timer::after_secs(5).await;
-        // Set PWM signal for 180 degrees (assume 2 ms pulse width)
-        servo1.set_high();
-        Timer::after(Duration::from_millis(2)).await;
-        servo1.set_low();
-        Timer::after(Duration::from_secs(1 as u64)).await;
-
-        servo1.set_high();
-        Timer::after(Duration::from_millis(2)).await;
-        servo1.set_low();
-        Timer::after(Duration::from_secs(1 as u64)).await;
-        servo1.set_high();
-        Timer::after(Duration::from_millis(2)).await;
-        servo1.set_low();
-        Timer::after(Duration::from_secs(1 as u64)).await;
-
+        config.compare_a = max;
+        servo1.set_config(&config);
+        Timer::after_millis(500).await;
+        // //ibla3333333333333i
+        // //abd is always right
+        ir_sensor_door1.wait_for_falling_edge().await;
+        config.compare_a = min;
+        servo1.set_config(&config);
+        Timer::after_millis(100).await;
     }
 }
 #[embassy_executor::task]
-async fn door2_task(mut ir_sensor_door2: Input<'static, PIN_9>, mut servo2: Output<'static, PIN_19>) {
+async fn door2_task(mut ir_sensor_door2: Input<'static, PIN_9>, mut servo2: Pwm<'static, embassy_rp::peripherals::PWM_CH1>) {
+    let mut config: PwmConfig = Default::default();
+        let min = 0x07AE;
+        let mid =min+min/2;
+        let max = min*2;
+        config.top = 0x9999;
+        config.compare_b = max;
+        config.divider = 64_i32.to_fixed();
+        info!("{}\n", config.divider);
     loop {
-            ir_sensor_door2.wait_for_rising_edge().await;
-            servo2.set_high();
-            Timer::after(Duration::from_millis(1)).await;
-            servo2.set_low();
-            Timer::after(Duration::from_secs(1 as u64)).await;
-            servo2.set_high();
-            Timer::after(Duration::from_millis(1)).await;
-            servo2.set_low();
-            Timer::after(Duration::from_secs(1 as u64)).await;
-            servo2.set_high();
-            Timer::after(Duration::from_millis(1)).await;
-            servo2.set_low();
-            Timer::after(Duration::from_secs(1 as u64)).await;
-
-            Timer::after_secs(5).await;
-            // Set PWM signal for 180 degrees (assume 2 ms pulse width)
-            servo2.set_high();
-            Timer::after(Duration::from_millis(2)).await;
-            servo2.set_low();
-            Timer::after(Duration::from_secs(1 as u64)).await;
-
-            servo2.set_high();
-            Timer::after(Duration::from_millis(2)).await;
-            servo2.set_low();
-            Timer::after(Duration::from_secs(1 as u64)).await;
-            servo2.set_high();
-            Timer::after(Duration::from_millis(2)).await;
-            servo2.set_low();
-            Timer::after(Duration::from_secs(1 as u64)).await;
+        ir_sensor_door2.wait_for_rising_edge().await;
+        config.compare_b = min;
+        servo2.set_config(&config);
+        Timer::after_millis(500).await;
+        ir_sensor_door2.wait_for_falling_edge().await;
+        config.compare_b = max;
+        servo2.set_config(&config);
+        Timer::after_millis(100).await;
 
     }
 
@@ -216,17 +189,26 @@ async fn main(spawner: Spawner) {
     config_pwm.top = 0xFFFF;
     config_pwm.compare_b = config_pwm.top;
 
-
     let mut config_pwm2: PwmConfig = Default::default();
     config_pwm2.top = 0xFFFF;
     config_pwm2.compare_a = config_pwm2.top;
 
+    let mut config: PwmConfig = Default::default();
+    let min = 0x07AE;
+    let mid =min+min/2;
+    let max = min*2;
+    config.top = 0x9999;
+    config.compare_a = min;
+    config.compare_b = max;
+    config.divider = 64_i32.to_fixed();
+    info!("{}\n", config.divider);
+       
     //buzzers
     let mut buzzer = Pwm::new_output_b(peripherals.PWM_CH5, peripherals.PIN_11, config_pwm.clone());
     let mut buzzer2= Pwm::new_output_a(peripherals.PWM_CH6, peripherals.PIN_28, config_pwm2.clone());
     //servos
-    let mut servo1 = Output::new(peripherals.PIN_20, Level::Low);
-    let mut servo2 = Output::new(peripherals.PIN_19, Level::Low);
+    let mut servo1 = Pwm::new_output_a(peripherals.PWM_CH2, peripherals.PIN_20, config.clone());
+    let mut servo2 = Pwm::new_output_b(peripherals.PWM_CH1, peripherals.PIN_19, config.clone());
 
     //spawning tasks
     spawner.spawn(fire_task(fire_sensor, buzzer)).unwrap();
